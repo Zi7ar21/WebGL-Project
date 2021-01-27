@@ -18,7 +18,7 @@
     <h1>WebGL Poggers!</h1>
     <p>Check out this canvas:</p>
     <canvas width="600"; height="600";>Kek, your web browser doesn't support WebGL!</canvas>
-    <script type="x-shader/x-vertex" id="vertex-shader">
+    <script id="vertex-shader" type="x-shader/x-vertex">
     #version 100
     //precision mediump float;
     precision highp float;
@@ -28,22 +28,25 @@
         gl_PointSize = 600.0;
     }
     </script>
-    <script type="x-shader/x-fragment" id="fragment-shader">
+    <script id="fragment-shader" type="x-shader/x-fragment">
     #version 100
     //precision mediump float;
     precision highp float;
 
     #define camerafov 1.0
-    #define cameraposition vec3(0.0, 0.0, -2.0)
-    #define maximummarches 128
-    #define collisiondistance 0.01
-    #define maxdistance 4.0
+    #define camerapos vec3(0.0, 0.0, -2.0)
+    #define maxmarches 128
+    #define maxdist 4.0
+    #define collisiondist 0.01
     #define iterations 8
     #define bailout 4.0
     #define power 8.0
 
-    //float distanceestimator(vec3 rayposition){return distance(rayposition, vec3(0.0))-0.5;}
-    float distanceestimator(vec3 pos){
+    /*float distanceestimator(vec3 rayposition){
+        return distance(rayposition, vec3(0.0))-0.5;
+    }*/
+
+    float DE(vec3 pos){
         vec3 z = pos;
         float dr = 1.0;
         float r = 0.0;
@@ -53,48 +56,54 @@
             // Convert to Polar Coordinates
             float theta = acos(z.z/r);
             float phi = atan(z.y,z.x);
-            dr =  pow(r, power-1.0)*power*dr+1.0;
+            dr = pow(r, power-1.0)*power*dr+1.0;
             // Scale and Rotate the Point
             float zr = pow( r,power);
             theta = theta*power;
             phi = phi*power;
             // Convert back to Cartesian Coordinates
             z = zr*vec3(sin(theta)*cos(phi), sin(phi)*sin(theta), cos(theta));
-            z+=pos;
+            z += pos;
         }
         return 0.5*log(r)*r/dr;
     }
 
-    vec3 raymarch(vec3 raydirection, vec3 rayorigin){
-        vec3 rayposition = rayorigin;
-        float distancetravelled = 0.0;
-        float distanceestimate;
-        for(int i = 0; i < maximummarches; i++){
-            distanceestimate = distanceestimator(rayposition);
-            if(distanceestimate < collisiondistance){return vec3(rayposition);}
-            rayposition += raydirection*distanceestimate;
-            distancetravelled += distanceestimate;
-            if(distancetravelled > maxdistance){break;}
+    vec4 raymarch(vec3 raydir, vec3 rayori){
+        vec3 raypos = rayori;
+        float distest;
+        float disttrav = 0.0;
+        for(int i = 0; i < maxmarches; i++){
+            distest = DE(raypos);
+            if(distest < collisiondist){return vec4(raypos, disttrav);}
+            disttrav += distest;
+            if(disttrav > maxdist){break;}
+            raypos += raydir*distest;
         }
-        return vec3(0.0);
+        return vec4(0.0);
     }
 
-    vec3 calcNormal(vec3 p){
-        const float eps = collisiondistance;
-        const vec2 h = vec2(eps, 0.0);
-        return normalize(vec3(distanceestimator(p+h.xyy)-distanceestimator(p-h.xyy),
-                              distanceestimator(p+h.yxy)-distanceestimator(p-h.yxy),
-                              distanceestimator(p+h.yyx)-distanceestimator(p-h.yyx)));
+    vec3 calcNormal(vec3 pos){
+        float h = collisiondist;
+        vec2 k = vec2(1.0, -1.0);
+        return normalize(k.xyy*DE(pos+k.xyy*h)+
+                         k.yyx*DE(pos+k.yyx*h)+
+                         k.yxy*DE(pos+k.yxy*h)+
+                         k.xxx*DE(pos+k.xxx*h));
     }
 
     void main(){
         vec2 fragCoord = gl_PointCoord;
         vec2 uv = (fragCoord-0.5)*2.0;
-        mat3 rotationmatrix = mat3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
-        vec3 raydirection = normalize(camerafov*(uv.x*rotationmatrix[0]+uv.y*rotationmatrix[1])+rotationmatrix[2]);
-        vec3 raymarched = raymarch(raydirection, cameraposition);
-        vec3 normals = calcNormal(raymarched);
-        gl_FragColor = vec4(normals, 1.0);
+        mat3 rotmat = mat3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+        vec3 raydir = normalize(camerafov*(uv.x*rotmat[0]+uv.y*rotmat[1])+rotmat[2]);
+        vec4 raymarched = raymarch(raydir, camerapos);
+        if(raymarched != vec4(0.0)){
+            vec3 normals = calcNormal(raymarched.xyz);
+            gl_FragColor = vec4(normals, 1.0);
+        }
+        else{
+            gl_FragColor = vec4(vec3(0.0), 1.0);
+        }
     }
     </script>
 </body>
