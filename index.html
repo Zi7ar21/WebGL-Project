@@ -33,19 +33,53 @@
     //precision mediump float;
     precision highp float;
 
-    #define camerafov 1.0
+    #define pi 3.14159265
+    #define twopi pi*2.0
+
+    #define camerafov 2.0
     #define camerapos vec3(0.0, 0.0, -2.0)
     #define maxmarches 128
     #define maxdist 4.0
     #define collisiondist 0.01
-    #define iterations 8
+    #define iterations 6
     #define bailout 4.0
     #define power 8.0
 
+    #define fragCoord gl_PointCoord*600.0
+    #define fragResolution vec2(600.0, 600.0)
+    /*#define fragFrame 1
+
+    // https://www.shadertoy.com/view/wltcRS
+    uint ns;
+    #define INIT_RNG ns = 185730U*uint(fragFrame)+uint(fragCoord.x+fragCoord.y*fragResolution.x);
+    void pcg(){
+        uint state = ns*747796405u+2891336453u;
+        uint word = ((state>>((state>>28u)+4u))^state)*277803737u;
+        ns = (word>>22u)^word;
+    }
+
+    float rand(){pcg(); return float(ns)/float(0xffffffffu);}
+    vec2 rand2(){return vec2(rand(), rand());}
+    vec3 rand3(){return vec3(rand(), rand(), rand());}
+    vec4 rand4(){return vec4(rand(), rand(), rand(), rand());}
+
+    //https://www.shadertoy.com/view/WttyWX
+    vec2 nrand2(float sigma, vec2 mean){
+        vec2 Z = rand2();
+        return mean+sigma*sqrt(-2.0*log(Z.x))*vec2(cos(twopi*Z.y), sin(twopi*Z.y));
+    }
+
+    vec3 nrand3(float sigma, vec3 mean){
+        vec4 Z = rand4();
+        return mean+sigma*sqrt(-2.0*log(Z.xxy))*vec3(cos(twopi*Z.z), sin(twopi*Z.z), cos(twopi*Z.w));
+    }*/
+
+    // Sphere Distance Estimator
     /*float distanceestimator(vec3 rayposition){
         return distance(rayposition, vec3(0.0))-0.5;
     }*/
 
+    // Mandelbulb Distance Estimator
     float DE(vec3 pos){
         vec3 z = pos;
         float dr = 1.0;
@@ -68,6 +102,7 @@
         return 0.5*log(r)*r/dr;
     }
 
+    // Raymarching, outputs the collision coordinate and the distance travelled, if the ray never hit anythig it outputs vec4(0.0)
     vec4 raymarch(vec3 raydir, vec3 rayori){
         vec3 raypos = rayori;
         float distest;
@@ -83,26 +118,30 @@
     }
 
     vec3 calcNormal(vec3 pos){
-        float h = collisiondist;
         vec2 k = vec2(1.0, -1.0);
-        return normalize(k.xyy*DE(pos+k.xyy*h)+
-                         k.yyx*DE(pos+k.yyx*h)+
-                         k.yxy*DE(pos+k.yxy*h)+
-                         k.xxx*DE(pos+k.xxx*h));
+        return normalize(k.xyy*DE(pos+k.xyy*collisiondist)+
+                         k.yyx*DE(pos+k.yyx*collisiondist)+
+                         k.yxy*DE(pos+k.yxy*collisiondist)+
+                         k.xxx*DE(pos+k.xxx*collisiondist));
+    }
+
+    vec3 background(vec3 dir){
+        return vec3(max(dot(vec3(1.0, 1.0, -1.0), dir), 0.0));
     }
 
     void main(){
-        vec2 fragCoord = gl_PointCoord;
-        vec2 uv = (fragCoord-0.5)*2.0;
+        //INIT_RNG;
+        vec2 uv = (fragCoord-0.5*fragResolution.xy)/max(fragResolution.x, fragResolution.y);
         mat3 rotmat = mat3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
         vec3 raydir = normalize(camerafov*(uv.x*rotmat[0]+uv.y*rotmat[1])+rotmat[2]);
         vec4 raymarched = raymarch(raydir, camerapos);
         if(raymarched != vec4(0.0)){
             vec3 normals = calcNormal(raymarched.xyz);
-            gl_FragColor = vec4(normals, 1.0);
+            vec3 reflection = reflect(raydir, normals);
+            gl_FragColor = vec4(background(reflection), 1.0);
         }
         else{
-            gl_FragColor = vec4(vec3(0.0), 1.0);
+            gl_FragColor = vec4(background(raydir), 1.0);
         }
     }
     </script>
