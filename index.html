@@ -1,23 +1,25 @@
 <!DOCTYPE html>
 
 <style>
-    html {background-color:#202020; font-family:"Verdana";}
-    body {color:#c0c0c0; font-size:16pt;}
+    html {background-color:#101010; font-size:16pt; font-family:"Verdana";}
     h1 {color:#e0e0e0; font-size:32pt;}
+    body {color:#c0c0c0;}
+    hr {border-style: solid; border-width: 1pt; border-color: #c0c0c0; border-radius: 1pt;}
 </style>
 
 <html>
 <head>
     <title>Nem and Zi7ar21's Epic Website</title>
-    <title>Drawing textures with code</title>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <script src="webgl-utils.js" type="text/javascript"></script>
 </head>
 <body>
     <h1>WebGL Poggers!</h1>
+    <hr>
     <p>Check out this canvas:</p>
-    <canvas width="600"; height="600";>Kek, your web browser doesn't support WebGL!</canvas>
+
+    <canvas width="400"; height="400";>Kek, your web browser doesn't support WebGL!</canvas>
     <script id="vertex-shader" type="x-shader/x-vertex">
     #version 100
     //precision mediump float;
@@ -25,7 +27,7 @@
     attribute vec2 position;
     void main(){
         gl_Position = vec4(position, 0.0, 1.0);
-        gl_PointSize = 600.0;
+        gl_PointSize = 400.0;
     }
     </script>
     <script id="fragment-shader" type="x-shader/x-fragment">
@@ -38,15 +40,15 @@
 
     #define camerafov 2.0
     #define camerapos vec3(0.0, 0.0, -2.0)
-    #define maxmarches 128
+    #define maxmarches 1024
     #define maxdist 4.0
-    #define collisiondist 0.01
+    #define collisiondist 1e-2
     #define iterations 6
     #define bailout 4.0
     #define power 8.0
 
-    #define fragCoord gl_PointCoord*600.0
-    #define fragResolution vec2(600.0, 600.0)
+    #define fragCoord gl_PointCoord*400.0
+    #define fragResolution vec2(400.0, 400.0)
     /*#define fragFrame 1
 
     // https://www.shadertoy.com/view/wltcRS
@@ -126,7 +128,7 @@
     }
 
     vec3 background(vec3 dir){
-        return vec3(max(dot(vec3(1.0, 1.0, -1.0), dir), 0.0));
+        return vec3(max(dot(normalize(vec3(1.0, 1.0, -1.0)), dir), 0.0));
     }
 
     void main(){
